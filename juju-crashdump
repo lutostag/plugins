@@ -183,7 +183,7 @@ class ShowDescription(argparse.Action):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--description', action=ShowDescription,
+    parser.add_argument('-d', '--description', nargs=0, action=ShowDescription,
                         help='Output a short description of the plugin')
     parser.add_argument('-m', '--model', default=None,
                         help='Model to act on')
