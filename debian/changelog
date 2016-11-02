@@ -2,4 +2,4 @@ juju-plugins (1.0) xenial; urgency=medium
 
   * Initial release
 
- -- Gregory Lutostanski <gregory.lutostanski@canonical.com>  Wed, 02 Nov 2016 20:48:19 -0500
+ -- Greg Lutostanski <gregory.lutostanski@canonical.com>  Wed, 02 Nov 2016 20:48:19 -0500

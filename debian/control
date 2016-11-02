@@ -1,7 +1,7 @@
 Source: juju-plugins
 Section: devel
 Priority: extra
-Maintainer: Gregory Lutostanski <gregory.lutostanski@canonical.com>
+Maintainer: Greg Lutostanski <gregory.lutostanski@canonical.com>
 Build-Depends: 
  debhelper,
  python-all (>= 2.6.6-3~),
