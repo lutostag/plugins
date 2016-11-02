@@ -34,7 +34,7 @@ Depends:
  juju-plugins,
  juju-wait,
  juju-core (>= 1.18.0) | juju (>= 2.0)
-Description: A meta-package to pull in all juju plugins.
+Description: Meta-package to pull in all juju plugins.
  These are a collection of plugins created by various authors to make
  using Juju easier.
  .
