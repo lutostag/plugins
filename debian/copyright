@@ -1,0 +1,10 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: juju-plugins
+Source:
+
+Files: *
+License: OSI Approved
+ We welcome contributions to create new juju plugins! We only request 
+ that you licence each plugin via a copyright/licence header within
+ each plugin file. We also require each plugin to be licenced with an
+ OSI approved licence.

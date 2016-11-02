@@ -1,0 +1,42 @@
+Source: juju-plugins
+Section: devel
+Priority: extra
+Maintainer: Gregory Lutostanski <gregory.lutostanski@canonical.com>
+Build-Depends: 
+ debhelper,
+ python-all (>= 2.6.6-3~),
+ python-yaml,
+ python-jujuclient,
+ python-apport,
+ python-setuptools,
+Standards-Version: 3.9.3
+XS-Python-Version: >= 2.6
+
+Package: juju-plugins
+Architecture: all
+Depends:
+ ${misc:Depends},
+ ${python:Depends},
+ python-apport,
+ python-jujuclient,
+ python-yaml,
+ juju-core (>= 1.18.0) | juju (>= 2.0)
+XB-Python-Version: ${python:Versions}
+Description: Juju plugins to make using Juju easier.
+ These are a collection of plugins created by various authors to make
+ using Juju easier.
+ .
+ This package includes plugins from https://github.com/juju/plugins
+
+Package: juju-plugins-all
+Architecture: all
+Depends:
+ juju-plugins,
+ juju-wait,
+ juju-core (>= 1.18.0) | juju (>= 2.0)
+Description: A meta-package to pull in all juju plugins.
+ These are a collection of plugins created by various authors to make
+ using Juju easier.
+ .
+ This package will install all known and packaged plugins (currently,
+ "wait" and "plugins").
