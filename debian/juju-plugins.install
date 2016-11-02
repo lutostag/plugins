@@ -1,1 +1,4 @@
-juju-* usr/share/juju-plugins
+juju* usr/share/juju-plugins
+utils.py usr/share/juju-plugins
+dhx-init.sh usr/share/juju-plugins
+README.md usr/share/doc/juju-plugins
