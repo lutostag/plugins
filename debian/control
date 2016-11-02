@@ -6,6 +6,7 @@ Build-Depends:
  debhelper,
  dh-linktree,
  python-all (>= 2.6.6-3~),
+ python2.7
  python-yaml,
  python-jujuclient,
  python-apport,
