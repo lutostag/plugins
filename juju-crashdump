@@ -83,7 +83,10 @@ def set_model(model):
 
 
 def run_cmd(command):
-    subprocess.check_call(command, shell=True)
+    try:
+        subprocess.check_call(command, shell=True)
+    except:
+        print('Command "%s" failed' % command)
 
 
 def juju_cmd(command):
@@ -119,7 +122,7 @@ class CrashCollector(object):
         )
         tar_cmd = TAR_CMD.format(dirs=" ".join(directories),
                                  max_size=self.max_size, uuid=self.uuid)
-        juju_cmd("""run --all 'sh -c "%s"'""" % tar_cmd)
+        run_cmd("""timeout 30s juju run --all 'sh -c "%s"'""" % tar_cmd)
 
     def retrieve_unit_tarballs(self):
         juju_status = yaml.load(open('juju_status.yaml', 'r'))
