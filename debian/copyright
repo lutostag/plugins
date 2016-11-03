@@ -1,6 +1,6 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: juju-plugins
-Source:
+Source: https://github.com/juju/plugins
 
 Files: *
 License: OSI Approved

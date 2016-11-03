@@ -1,1 +1,1 @@
-embed usr/share/juju-plugins/juju-* usr/bin
+embed usr/share/juju-plugins usr/bin

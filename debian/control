@@ -4,6 +4,7 @@ Priority: extra
 Maintainer: Greg Lutostanski <gregory.lutostanski@canonical.com>
 Build-Depends:
  debhelper,
+ dh-python,
  dh-linktree,
  python-all (>= 2.6.6-3~),
  python-yaml,
@@ -21,7 +22,6 @@ Depends:
  python-apport,
  python-jujuclient,
  python-yaml,
- juju-core (>= 1.18.0) | juju (>= 2.0)
 XB-Python-Version: ${python:Versions}
 Description: Juju plugins to make using Juju easier.
  These are a collection of plugins created by various authors to make
@@ -34,7 +34,6 @@ Architecture: all
 Depends:
  juju-plugins,
  juju-wait,
- juju-core (>= 1.18.0) | juju (>= 2.0)
 Description: Meta-package to pull in all juju plugins.
  These are a collection of plugins created by various authors to make
  using Juju easier.
