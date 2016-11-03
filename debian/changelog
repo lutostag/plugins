@@ -1,3 +1,9 @@
+juju-plugins (1.0.2) xenial; urgency=medium
+
+  * Even more packaging bugfixes.
+
+ -- Greg Lutostanski <gregory.lutostanski@canonical.com>  Thu, 03 Nov 2016 08:31:21 +0000
+
 juju-plugins (1.0.1) xenial; urgency=medium
 
   * Bugfixes to the packaging
