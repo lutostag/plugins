@@ -5,7 +5,6 @@ Maintainer: Greg Lutostanski <gregory.lutostanski@canonical.com>
 Build-Depends:
  debhelper,
  dh-python,
- dh-linktree,
  python-all (>= 2.6.6-3~),
  python-yaml,
  python-jujuclient,

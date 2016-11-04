@@ -1,7 +1,15 @@
 #!/usr/bin/make -f
 
 %:
-	dh $@ --with=python2 --with=linktree
+	dh $@ --with=python2
 
-override_dh_linktree:
-	dh_linktree -Xutils.py -Xjuju.png
+override_dh_link:
+	# workaround for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=438601
+	dh_installdirs
+	cd debian/juju-plugins && \
+        for i in usr/share/juju-plugins/juju-* ; do \
+                i=`basename "$$i"` ; \
+                ln -s "../share/juju-plugins/$$i" usr/bin/ ; \
+        done && \
+        cd ../.. && \
+        dh_link -pjuju-plugins
