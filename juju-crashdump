@@ -38,25 +38,34 @@ DIRECTORIES = [
     '/var/lib/libvirt/filesystems/plumgrid-data/log',
     '/var/lib/libvirt/filesystems/plumgrid/var/log',
 ]
+TIMEOUT = 45
 
 TAR_CMD = """sudo find {dirs} -mount -type f -size -{max_size}c -o \
--size {max_size}c 2>/dev/null | sudo tar -pcf /tmp/juju-dump-{uuid}.tar \
+-size {max_size}c 2>/dev/null | sudo tar -cf /tmp/juju-dump-{uuid}.tar \
 --files-from - 2>/dev/null"""
+SOS_CMD = """& sudo apt-get install -qy sosreport 2>/dev/null 1>&2; \
+sudo mkdir /tmp/{uuid}; sudo sosreport --batch --quiet --build {sos_options} \
+--tmp-dir=/tmp/{uuid} 2>/dev/null; wait; \
+sudo tar -rf /tmp/juju-dump-{uuid}.tar -C /tmp/{uuid}/*/ * 2>/dev/null"""
 
 
 def service_unit_addresses(status):
     """From a given juju_status.yaml dict return a mapping of
-    {'<ip>': ['<service1>', '<service2>', '<machine/container>']}."""
-    out = defaultdict(set)
+    {'machine/container': ['<service1>', '<service2>', '<ip>']}."""
+    machines = {}
+    services = defaultdict(set)
     units = set()
     for m_id, m_info in status['machines'].items():
         if 'dns-name' not in m_info:
             continue
-        out[m_info['dns-name']].add("machine_%s" % m_id)
+        machines["machine%s/baremetal" % m_id] = m_info['dns-name']
+        services[m_info['dns-name']].add(m_info['dns-name'])
         for c_id, c_info in m_info.get('containers', {}).items():
             if 'dns-name' not in c_info:
                 continue
-            out[c_info['dns-name']].add("container_%s" % c_id)
+            machines["machine%s/container%s" % (m_id, c_id)] = \
+                m_info['dns-name']
+            services[c_info['dns-name']].add(c_info['dns-name'])
 
     for _, a_info in status['applications'].items():
         if 'subordinate-to' in a_info:
@@ -65,14 +74,16 @@ def service_unit_addresses(status):
             if 'public-address' not in u_info:
                 continue
             addr = u_info['public-address']
-            out[addr].add(u_id)
+            services[addr].add(u_id)
             units.add(u_id)
             if 'subordinates' in u_info:
                 for s_id, s_info in u_info['subordinates'].items():
                     if 'public-address' not in s_info:
                         continue
                     addr = s_info['public-address']
-                    out[addr].add(s_id)
+                    services[addr].add(s_id)
+
+    out = {machine_name: services[ip] for machine_name, ip in machines.items()}
 
     return out, units
 
@@ -83,10 +94,7 @@ def set_model(model):
 
 
 def run_cmd(command):
-    try:
         subprocess.check_call(command, shell=True)
-    except:
-        print('Command "%s" failed' % command)
 
 
 def juju_cmd(command):
@@ -104,48 +112,64 @@ def juju_debuglog():
 
 class CrashCollector(object):
     """A log file collector for juju and charms"""
-    def __init__(self, model, max_size, extra_dirs):
+    def __init__(self, model, **kwargs):
         if model:
             set_model(model)
-        self.max_size = max_size
-        self.extra_dirs = extra_dirs
+        self.context = kwargs
         self.cwd = os.getcwd()
         self.tempdir = tempfile.mkdtemp(dir=expanduser('~'))
         os.chdir(self.tempdir)
         self.uuid = uuid.uuid4()
 
     def create_unit_tarballs(self):
-        directories = list(DIRECTORIES)
-        directories.extend(self.extra_dirs)
+        print("Collating data on the nodes...")
+        directories = list(self.context['extra_dirs'])
         directories.extend(
             ['/var/lib/lxd/containers/*/rootfs' + item for item in directories]
         )
-        tar_cmd = TAR_CMD.format(dirs=" ".join(directories),
-                                 max_size=self.max_size, uuid=self.uuid)
-        run_cmd("""timeout 30s juju run --all 'sh -c "%s"'""" % tar_cmd)
+        command = TAR_CMD
+        if self.context['enable_sos']:
+            command += SOS_CMD
+        command = command.format(dirs=" ".join(directories), uuid=self.uuid,
+                **self.context)
+        try:
+            run_cmd("""timeout %ss juju run --all 'sh -c "%s"'"""
+                    % (self.context['timeout'], command))
+        except subprocess.CalledProcessError:
+            print("Could not retrieve logs from all systems, will still " \
+                  "use what was available.")
+
 
     def retrieve_unit_tarballs(self):
+        print("Pulling data from the nodes...")
         juju_status = yaml.load(open('juju_status.yaml', 'r'))
         aliases, units = service_unit_addresses(juju_status) 
-        for ip, alias_group in aliases.items():
+        for machine, alias_group in aliases.items():
             any_unit = alias_group.intersection(units).pop()
             juju_cmd("scp %s:/tmp/juju-dump-%s.tar ." % (any_unit, self.uuid))
-            shutil.move("juju-dump-%s.tar" % self.uuid, "%s.tar" % ip)
+            run_cmd("mkdir -p %s || true" % machine)
+            run_cmd("tar -pxf juju-dump-%s.tar -C %s" % (self.uuid, machine))
+            run_cmd("rm juju-dump-%s.tar" % self.uuid)
             for alias in alias_group:
-                os.symlink('%s.tar' % ip, '%s.tar' % alias.replace('/', '_'))
+                os.symlink('%s' % machine, '%s' % alias.replace('/', '_'))
 
     def collect(self):
         juju_status()
         juju_debuglog()
         self.create_unit_tarballs()
         self.retrieve_unit_tarballs()
+        print("Compressing data locally...")
         tar_file = "juju-crashdump-%s.tar" % self.uuid
-        run_cmd("tar -pcf %s * 2>/dev/null" % tar_file)
+        try:
+            run_cmd("tar -cf %s * 2>/dev/null" % tar_file)
+        except:
+            pass # ignore not being able to tar some links
         run_cmd("gzip --force %s" % tar_file)
         os.chdir(self.cwd)
         gzipped_file = tar_file + '.gz'
         shutil.move(os.path.join(self.tempdir, gzipped_file), '.')
         self.cleanup()
+        print("Saved crasdump to: %s" % gzipped_file)
         return gzipped_file
 
     def cleanup(self):
@@ -192,17 +216,27 @@ def parse_args():
                         help='Model to act on')
     parser.add_argument('-f', '--max-file-size',  default=MAX_FILE_SIZE,
                         help='The max file size (bytes) for included files')
+    parser.add_argument('-s', '--enable-sos', action='store_true',
+                        default=False, help='Include sosreport with the dump')
+    parser.add_argument('-S', '--sos-options',  default='',
+                        help='Extra options to pass to sosreport')
     parser.add_argument('-b', '--bug', default=None,
                         help='Upload crashdump to the given launchpad bug #')
-    parser.add_argument('extra_dir', nargs='*', default=[],
+    parser.add_argument('extra_dir', nargs='*', default=DIRECTORIES,
                         help='Extra directories to snapshot')
+    parser.add_argument(
+        '-t', '--timeout', default=TIMEOUT,
+        help='Timeout for collating the data on nodes (seconds)'
+    )
     return parser.parse_args()
 
 
 def main():
     opts = parse_args()
     collector = CrashCollector(model=opts.model, max_size=opts.max_file_size,
-                               extra_dirs=opts.extra_dir)
+                               extra_dirs=opts.extra_dir,
+                               sos_options=opts.sos_options,
+                               enable_sos=opts.enable_sos, timeout=opts.timeout)
     filename = collector.collect()
     if opts.bug:
         upload_file_to_bug(opts.bug, filename)
